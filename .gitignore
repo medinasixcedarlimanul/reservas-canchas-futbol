@@ -1,0 +1,14 @@
+# Environment
+.env
+.env.local
+
+# Database storage
+mysql_data/
+data/
+
+# Logs
+*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db
