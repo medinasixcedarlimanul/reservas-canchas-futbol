@@ -91,6 +91,14 @@
             <textarea id="input-notas" class="form-control" rows="2" placeholder="Ej. Traemos chalecos propios"></textarea>
           </div>
 
+          <div class="form-group">
+            <label class="form-label" for="select-modo-pago">Forma de Pago</label>
+            <select id="select-modo-pago" class="form-control">
+              <option value="online">💳 Pagar en Línea (Pasarela Flow / Tarjeta / Stripe)</option>
+              <option value="sede">🏟️ Pagar en Sede (En ventanilla al llegar)</option>
+            </select>
+          </div>
+
           <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 1rem; font-weight: 600;">Total a Pagar:</span>
             <strong id="summary-precio" style="font-size: 1.4rem; color: var(--primary);">S/ 0.00</strong>
@@ -246,6 +254,7 @@
         const canchaId = document.getElementById('select-cancha').value;
         const fecha = document.getElementById('input-fecha').value;
         const notas = document.getElementById('input-notas').value;
+        const modoPago = document.getElementById('select-modo-pago').value;
 
         if (!canchaId || !selectedSlot) {
           mostrarAlerta('Por favor selecciona una cancha y un horario.', 'danger');
@@ -257,6 +266,32 @@
         btn.textContent = 'Procesando...';
 
         try {
+          // Si el cliente eligió pago en línea
+          if (modoPago === 'online') {
+            const user = auth.getUser();
+            const payloadOnline = {
+              negocio_id: selectedCancha.negocio_id,
+              cancha_id: parseInt(canchaId, 10),
+              fecha,
+              hora_inicio: selectedSlot.inicio,
+              hora_fin: selectedSlot.fin,
+              cliente_nombre: user ? user.nombre : 'Cliente',
+              notas: notas || null,
+              monto: parseFloat(selectedCancha.precio_hora),
+              tipo_pago: 'completo'
+            };
+
+            const resp = await api.post('/pagos/online/iniciar', payloadOnline);
+            if (resp.redirect_url) {
+              mostrarAlerta('Redirigiendo a la pasarela segura de pago...', 'info');
+              setTimeout(() => {
+                window.location.href = resp.redirect_url;
+              }, 800);
+              return;
+            }
+          }
+
+          // Pago presencial en sede
           const payload = {
             cancha_id: parseInt(canchaId, 10),
             fecha,
