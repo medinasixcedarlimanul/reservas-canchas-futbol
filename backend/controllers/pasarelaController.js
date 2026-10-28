@@ -232,3 +232,4 @@ class PasarelaController {
 }
 
 module.exports = new PasarelaController();
+
