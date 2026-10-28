@@ -142,13 +142,24 @@ backend/
 
 ---
 
-## 4. Ejecución en Desarrollo
+## 4. Ejecución del Backend
 
-1. Asegúrate de tener la base de datos MySQL corriendo:
+### 4.1 Opción A: Despliegue con Docker (Recomendado)
+Levanta toda la plataforma (Base de datos + API Backend) de forma coordinada con un solo comando:
+```bash
+docker compose up --build -d
+```
+- El contenedor `reservas-canchas-db` arrancará primero y verificará su salud.
+- El contenedor `reservas-canchas-backend` esperará automáticamente a que la base de datos esté lista antes de inicializar Express.
+- La API estará escuchando en `http://localhost:3000`.
+
+### 4.2 Opción B: Ejecución Local con Node.js
+Para desarrollo interactivo en la máquina host:
+1. Iniciar el servicio de base de datos en Docker:
    ```bash
-   docker compose up -d
+   docker compose up -d db
    ```
-2. Instalar dependencias en el directorio `backend`:
+2. Instalar dependencias en `backend/`:
    ```bash
    cd backend && npm install
    ```
@@ -156,10 +167,11 @@ backend/
    ```bash
    cp .env.example .env
    ```
-4. Iniciar el servidor en modo desarrollo:
+4. Iniciar el servidor:
    ```bash
    npm run dev
-   # o para modo estándar:
+   # o para modo producción:
    npm start
    ```
-5. El servidor estará escuchando en `http://localhost:3000`. Puedes verificar su estado en `http://localhost:3000/health`.
+5. Endpoint de comprobación de salud: `http://localhost:3000/health`.
+
