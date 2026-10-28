@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('crypto');
 const db = require('../db/connection');
+const emailService = require('./emailService');
 
 class ReservaService {
   async getAll({ negocioId = null, usuarioId = null, fecha = null, estado = null } = {}) {
@@ -111,7 +112,26 @@ class ReservaService {
       ]
     );
 
-    return this.getById(result.insertId);
+    const nuevaReserva = await this.getById(result.insertId);
+
+    // Notificación por correo asíncrona (no bloqueante)
+    if (nuevaReserva.usuario_email) {
+      emailService.enviarConfirmacionReserva({
+        email: nuevaReserva.usuario_email,
+        clienteNombre: nuevaReserva.cliente_nombre || nuevaReserva.usuario_nombre,
+        negocioNombre: nuevaReserva.negocio_nombre,
+        codigoReserva: nuevaReserva.codigo,
+        canchaNombre: nuevaReserva.cancha_nombre,
+        fecha: nuevaReserva.fecha instanceof Date ? nuevaReserva.fecha.toISOString().split('T')[0] : nuevaReserva.fecha,
+        horaInicio: nuevaReserva.hora_inicio,
+        horaFin: nuevaReserva.hora_fin,
+        montoTotal: nuevaReserva.precio_hora || 0,
+        montoPagado: 0,
+        saldoPendiente: nuevaReserva.precio_hora || 0
+      }).catch(err => console.error('⚠️ [Email Error al crear reserva]:', err.message));
+    }
+
+    return nuevaReserva;
   }
 
   async cancel(id, { canceladoPorId, rol }) {
@@ -137,7 +157,23 @@ class ReservaService {
       [canceladoPorId, id]
     );
 
-    return this.getById(id);
+    const cancelada = await this.getById(id);
+
+    // Notificación por correo asíncrona de cancelación
+    if (cancelada.usuario_email) {
+      emailService.enviarCancelacionReserva({
+        email: cancelada.usuario_email,
+        clienteNombre: cancelada.cliente_nombre || cancelada.usuario_nombre,
+        negocioNombre: cancelada.negocio_nombre,
+        codigoReserva: cancelada.codigo,
+        canchaNombre: cancelada.cancha_nombre,
+        fecha: cancelada.fecha instanceof Date ? cancelada.fecha.toISOString().split('T')[0] : cancelada.fecha,
+        horaInicio: cancelada.hora_inicio,
+        horaFin: cancelada.hora_fin
+      }).catch(err => console.error('⚠️ [Email Error al cancelar reserva]:', err.message));
+    }
+
+    return cancelada;
   }
 
   async checkIn(id, recepcionistaId) {

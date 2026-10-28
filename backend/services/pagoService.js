@@ -1,5 +1,6 @@
 'use strict';
 const db = require('../db/connection');
+const emailService = require('./emailService');
 
 class PagoService {
   async getAll({ negocioId = null, estado = null, metodo = null } = {}) {
@@ -122,8 +123,37 @@ class PagoService {
       }
 
       await connection.commit();
-      return this.getById(pagoId);
-    } catch (err) {
+      const nuevoPago = await this.getById(pagoId);
+
+      // Notificación de comprobante de pago por correo asíncrona
+      Promise.resolve().then(async () => {
+        try {
+          const [userInfo] = await db.query(
+            `SELECT u.email, u.nombre, r.cliente_nombre
+             FROM reservas r
+             LEFT JOIN usuarios u ON r.usuario_id = u.id
+             WHERE r.id = ?`,
+            [reservaId]
+          );
+          if (userInfo.length > 0 && userInfo[0].email) {
+            await emailService.enviarComprobantePago({
+              email: userInfo[0].email,
+              clienteNombre: userInfo[0].cliente_nombre || userInfo[0].nombre,
+              negocioNombre: nuevoPago.negocio_nombre || 'SportReserve',
+              codigoReserva: nuevoPago.reserva_codigo,
+              monto: nuevoPago.monto,
+              metodo: nuevoPago.metodo,
+              tipoPago: nuevoPago.tipo_pago,
+              referencia: nuevoPago.referencia,
+              numeroComprobante: nuevoPago.comprobante ? nuevoPago.comprobante.numero : null
+            });
+          }
+        } catch (err) {
+          console.error('⚠️ [Email Error al emitir pago]:', err.message);
+        }
+      });
+
+      return nuevoPago;
       await connection.rollback();
       throw err;
     } finally {
@@ -170,7 +200,6 @@ class PagoService {
 
       await connection.commit();
       return this.getById(pagoId);
-    } catch (err) {
       await connection.rollback();
       throw err;
     } finally {

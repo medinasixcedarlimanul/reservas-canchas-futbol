@@ -16,6 +16,7 @@ const pagoRoutes = require('./routes/pagos');
 const cajaRoutes = require('./routes/caja');
 const cuponRoutes = require('./routes/cupones');
 const reporteRoutes = require('./routes/reportes');
+const pasarelaRoutes = require('./routes/pasarela');
 
 const { generalLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
@@ -58,6 +59,7 @@ app.use('/api/negocios', negocioRoutes);
 app.use('/api/deportes', deporteRoutes);
 app.use('/api/canchas', canchaRoutes);
 app.use('/api/reservas', reservaRoutes);
+app.use('/api/pagos/online', pasarelaRoutes);
 app.use('/api/pagos', pagoRoutes);
 app.use('/api/caja', cajaRoutes);
 app.use('/api/cupones', cuponRoutes);

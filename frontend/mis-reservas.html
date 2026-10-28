@@ -56,6 +56,16 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       auth.requireAuth();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('pago_exitoso')) {
+        const codigo = urlParams.get('codigo') || '';
+        mostrarAlerta(`
+          🎉 <strong>¡Pago en línea procesado con éxito!</strong><br>
+          Tu reserva ${codigo ? `<strong>${codigo}</strong> ` : ''}ha sido confirmada y tu comprobante fue enviado a tu correo.
+        `, 'success');
+      }
+
       cargarMisReservas();
     });
 
