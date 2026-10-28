@@ -140,6 +140,26 @@ backend/
 |---|---|---|---|
 | `GET` | `/api/reportes/dashboard` | `superadmin`, `admin` | Métricas de ocupación, ingresos por método y estados de reserva. |
 
+### 3.10 Pasarela de Pagos Online (`/api/pagos/online`)
+| Método | Endpoint | Acceso | Descripción |
+|---|---|---|---|
+| `POST` | `/api/pagos/online/iniciar` | Cliente | Inicia transacción online con bloqueo temporal (15 min) y genera checkout en pasarela (Flow, Stripe o Mock). |
+| `POST` | `/api/pagos/online/webhook/flow` | Público | Webhook de confirmación asíncrona para Flow API. |
+| `POST` | `/api/pagos/online/webhook/stripe` | Público | Webhook de confirmación asíncrona para Stripe Checkout (`checkout.session.completed`). |
+| `GET` | `/api/pagos/online/retorno` | Público | Redirección del navegador post-pago hacia `/mis-reservas.html?pago_exitoso=true`. |
+| `GET` | `/api/pagos/online/estado/:token` | Cliente | Consulta el estado de la transacción y orden pendiente. |
+| `GET` | `/api/pagos/online/sandbox-checkout` | Público | Vista interactiva de simulación de pago en local cuando no hay API keys configuradas. |
+| `POST` | `/api/pagos/online/sandbox-confirmar`| Público | Emite confirmación de cobro simulado para pruebas locales. |
+
+### 3.11 Servicio de Correo Transaccional (`emailService`)
+Módulo centralizado para la emisión de correos HTML responsivos. Diseñado de forma modular para operar con **cero dependencias** (utiliza `fetch` nativo de Node.js):
+- **Proveedores soportados**: `resend`, `brevo`, o `mock` (simulación en consola si no se han cargado credenciales).
+- **Tipos de correo emitidos**:
+  1. `enviarConfirmacionReserva`: Emitido automáticamente al confirmar una reserva (online o presencial).
+  2. `enviarComprobantePago`: Notificación de boleta/factura con desglose del monto abonado y referencia.
+  3. `enviarCancelacionReserva`: Aviso al cliente tras cancelar un horario.
+- **Activación en producción**: Solo requiere colocar `RESEND_API_KEY` o `BREVO_API_KEY` en el archivo `.env`.
+
 ---
 
 ## 4. Ejecución del Backend

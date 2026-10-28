@@ -2,6 +2,10 @@
 .env
 .env.local
 
+# Dependencies
+node_modules/
+*/node_modules/
+
 # Database storage
 mysql_data/
 data/
@@ -9,11 +13,6 @@ data/
 # Logs
 *.log
 
-# Node.js
-node_modules/
-
-
 # OS metadata
 .DS_Store
 Thumbs.db
-

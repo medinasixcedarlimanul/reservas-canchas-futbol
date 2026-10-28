@@ -38,6 +38,18 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_reservas_multinegocio_2026_key}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mock}
+      EMAIL_FROM: ${EMAIL_FROM:-reservas@sportreserve.com}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-SportReserve Platform}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      PAYMENT_GATEWAY_PROVIDER: ${PAYMENT_GATEWAY_PROVIDER:-mock}
+      FLOW_API_KEY: ${FLOW_API_KEY:-}
+      FLOW_SECRET_KEY: ${FLOW_SECRET_KEY:-}
+      FLOW_ENV: ${FLOW_ENV:-sandbox}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     volumes:
