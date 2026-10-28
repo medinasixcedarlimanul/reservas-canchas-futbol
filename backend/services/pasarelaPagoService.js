@@ -443,3 +443,4 @@ class PasarelaPagoService {
 }
 
 module.exports = new PasarelaPagoService();
+

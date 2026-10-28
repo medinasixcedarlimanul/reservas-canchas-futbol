@@ -22,3 +22,4 @@ router.get('/sandbox-checkout', pasarelaController.renderSandboxCheckout.bind(pa
 router.post('/sandbox-confirmar', pasarelaController.confirmarSandbox.bind(pasarelaController));
 
 module.exports = router;
+
