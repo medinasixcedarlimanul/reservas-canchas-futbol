@@ -4,19 +4,8 @@ Plataforma integral, modular y escalable para la gestión y reserva de canchas y
 
 ---
 
-## 📌 Estado del Proyecto
 
-- **Fase Actual**: Base de Datos, Backend API, Frontend Web e Integraciones Externas (Todos integrados y contenedorizados).
-- **Motor de BD**: MySQL 8.0+ (InnoDB, UTF-8 `utf8mb4`).
-- **Servidor Backend**: Node.js 20 (Express) contenedorizado en Alpine Linux.
-- **Frontend**: Interfaz web moderna (HTML5 semántico, Vanilla CSS Design System con Glassmorphism y Vanilla JS ES6+) servida por el backend.
-- **Pasarelas de Pago**: Soporte para **Flow**, **Stripe** y **Modo Sandbox / Simulador Local** integrado.
-- **Correos Transaccionales**: Soporte para **Resend**, **Brevo** y **Modo Mock** con plantillas HTML responsivas.
-- **Despliegue Local**: Docker Compose orquestando Base de Datos + API Backend + Frontend en `http://localhost:3000`.
-
----
-
-## 📚 Índice de Documentación Técnica
+## Índice de Documentación Técnica
 
 El proyecto cuenta con documentación técnica exhaustiva para cada área del sistema:
 
