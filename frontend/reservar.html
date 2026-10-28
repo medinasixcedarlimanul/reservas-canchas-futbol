@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservar Cancha — SportReserve</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="navbar-slot"></div>
+
+  <main class="container" style="max-width: 1000px;">
+    <div class="card-header" style="margin-bottom: 2rem;">
+      <div>
+        <h1 style="font-size: 2.2rem;">Reserva de Cancha en Tiempo Real</h1>
+        <p style="color: var(--text-muted);">Elige tu cancha, selecciona la fecha y haz clic sobre el horario disponible</p>
+      </div>
+    </div>
+
+    <div id="alert-box" style="display: none;"></div>
+
+    <div style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: flex-start;">
+      <!-- Columna Principal: Selección y Horarios -->
+      <div>
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">1. Selecciona Cancha y Fecha</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="select-cancha">Cancha</label>
+              <select id="select-cancha" class="form-control">
+                <option value="">Selecciona una cancha...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="input-fecha">Fecha del Juego</label>
+              <input type="date" id="input-fecha" class="form-control">
+            </div>
+          </div>
+        </div>
+
+        <!-- Rejilla de Horarios Dinámicos -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="font-size: 1.25rem;">2. Horarios Disponibles</h2>
+            <div style="display: flex; gap: 1rem; font-size: 0.82rem;">
+              <span style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="width: 10px; height: 10px; background: var(--primary); border-radius: 50%;"></span> Disponible
+              </span>
+              <span style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="width: 10px; height: 10px; background: var(--danger); border-radius: 50%;"></span> Ocupado
+              </span>
+            </div>
+          </div>
+
+          <div id="slots-container" class="slots-grid">
+            <div style="grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 2rem;">
+              Selecciona una cancha y una fecha para consultar disponibilidad.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna Lateral: Resumen y Confirmación -->
+      <aside>
+        <div class="card" style="position: sticky; top: 90px;">
+          <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+            Resumen de Reserva
+          </h2>
+
+          <div style="margin-bottom: 1.25rem; font-size: 0.92rem;">
+            <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Cancha:</span>
+              <strong id="summary-cancha">—</strong>
+            </div>
+            <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Centro Deportivo:</span>
+              <span id="summary-negocio" style="color: var(--primary); font-weight: 600;">—</span>
+            </div>
+            <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Fecha:</span>
+              <strong id="summary-fecha">—</strong>
+            </div>
+            <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Horario:</span>
+              <strong id="summary-horario" style="color: var(--accent);">—</strong>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-notas">Notas u Observaciones (Opcional)</label>
+            <textarea id="input-notas" class="form-control" rows="2" placeholder="Ej. Traemos chalecos propios"></textarea>
+          </div>
+
+          <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 1rem; font-weight: 600;">Total a Pagar:</span>
+            <strong id="summary-precio" style="font-size: 1.4rem; color: var(--primary);">S/ 0.00</strong>
+          </div>
+
+          <button id="btn-confirmar" class="btn btn-primary btn-lg" style="width: 100%;" disabled>
+            Confirmar Reserva
+          </button>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SportReserve Platform — Sistema Multi-Negocio de Reservas Deportivas.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      let canchasList = [];
+      let selectedSlot = null;
+      let selectedCancha = null;
+
+      // Configurar fecha por defecto (hoy)
+      const inputFecha = document.getElementById('input-fecha');
+      const hoy = new Date().toISOString().split('T')[0];
+      inputFecha.value = hoy;
+      inputFecha.min = hoy;
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const preselectedCanchaId = urlParams.get('cancha_id');
+
+      // 1. Cargar catálogo de canchas
+      try {
+        canchasList = await api.get('/canchas');
+        const selectCancha = document.getElementById('select-cancha');
+
+        canchasList.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.nombre} (${c.deporte_nombre}) — ${c.negocio_nombre}`;
+          if (preselectedCanchaId && c.id == preselectedCanchaId) opt.selected = true;
+          selectCancha.appendChild(opt);
+        });
+
+        if (preselectedCanchaId) {
+          onCanchaChange();
+        }
+      } catch (err) {
+        mostrarAlerta('Error cargando canchas: ' + err.message, 'danger');
+      }
+
+      // Eventos
+      document.getElementById('select-cancha').addEventListener('change', onCanchaChange);
+      document.getElementById('input-fecha').addEventListener('change', onFechaChange);
+      document.getElementById('btn-confirmar').addEventListener('click', confirmarReserva);
+
+      function onCanchaChange() {
+        const canchaId = document.getElementById('select-cancha').value;
+        selectedCancha = canchasList.find(c => c.id == canchaId) || null;
+        selectedSlot = null;
+        updateSummary();
+        consultarDisponibilidad();
+      }
+
+      function onFechaChange() {
+        selectedSlot = null;
+        updateSummary();
+        consultarDisponibilidad();
+      }
+
+      async function consultarDisponibilidad() {
+        const canchaId = document.getElementById('select-cancha').value;
+        const fecha = document.getElementById('input-fecha').value;
+        const container = document.getElementById('slots-container');
+
+        if (!canchaId || !fecha) {
+          container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 2rem;">Selecciona una cancha y fecha para ver disponibilidad.</div>`;
+          return;
+        }
+
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">Consultando horarios...</div>`;
+
+        try {
+          const res = await api.get(`/canchas/${canchaId}/disponibilidad?fecha=${fecha}`);
+          if (!res.slots || res.slots.length === 0) {
+            container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-dim);">No hay slots disponibles para esta fecha.</div>`;
+            return;
+          }
+
+          container.innerHTML = res.slots.map(s => `
+            <div class="slot-item ${s.disponible ? 'available' : 'occupied'}"
+                 data-inicio="${s.hora_inicio}"
+                 data-fin="${s.hora_fin}"
+                 onclick="${s.disponible ? `seleccionarHorario('${s.hora_inicio}', '${s.hora_fin}', this)` : ''}">
+              <div>${s.hora_inicio.slice(0, 5)} - ${s.hora_fin.slice(0, 5)}</div>
+              <small style="font-size: 0.72rem; display: block; margin-top: 0.2rem;">
+                ${s.disponible ? 'Libre' : 'Ocupado'}
+              </small>
+            </div>
+          `).join('');
+        } catch (err) {
+          container.innerHTML = `<div class="alert alert-danger" style="grid-column: 1/-1;">Error al consultar horarios: ${err.message}</div>`;
+        }
+      }
+
+      window.seleccionarHorario = function(inicio, fin, elemento) {
+        document.querySelectorAll('.slot-item').forEach(el => el.classList.remove('selected'));
+        elemento.classList.add('selected');
+        selectedSlot = { inicio, fin };
+        updateSummary();
+      };
+
+      function updateSummary() {
+        const summaryCancha = document.getElementById('summary-cancha');
+        const summaryNegocio = document.getElementById('summary-negocio');
+        const summaryFecha = document.getElementById('summary-fecha');
+        const summaryHorario = document.getElementById('summary-horario');
+        const summaryPrecio = document.getElementById('summary-precio');
+        const btnConfirmar = document.getElementById('btn-confirmar');
+
+        if (selectedCancha) {
+          summaryCancha.textContent = selectedCancha.nombre;
+          summaryNegocio.textContent = selectedCancha.negocio_nombre;
+          summaryPrecio.textContent = `S/ ${parseFloat(selectedCancha.precio_hora).toFixed(2)}`;
+        } else {
+          summaryCancha.textContent = '—';
+          summaryNegocio.textContent = '—';
+          summaryPrecio.textContent = 'S/ 0.00';
+        }
+
+        summaryFecha.textContent = document.getElementById('input-fecha').value || '—';
+
+        if (selectedSlot) {
+          summaryHorario.textContent = `${selectedSlot.inicio.slice(0, 5)} a ${selectedSlot.fin.slice(0, 5)}`;
+          btnConfirmar.disabled = false;
+        } else {
+          summaryHorario.textContent = '—';
+          btnConfirmar.disabled = true;
+        }
+      }
+
+      async function confirmarReserva() {
+        if (!auth.isAuthenticated()) {
+          alert('Debes iniciar sesión para confirmar tu reserva');
+          window.location.href = `/login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+          return;
+        }
+
+        const canchaId = document.getElementById('select-cancha').value;
+        const fecha = document.getElementById('input-fecha').value;
+        const notas = document.getElementById('input-notas').value;
+
+        if (!canchaId || !selectedSlot) {
+          mostrarAlerta('Por favor selecciona una cancha y un horario.', 'danger');
+          return;
+        }
+
+        const btn = document.getElementById('btn-confirmar');
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+
+        try {
+          const payload = {
+            cancha_id: parseInt(canchaId, 10),
+            fecha,
+            hora_inicio: selectedSlot.inicio,
+            hora_fin: selectedSlot.fin,
+            notas: notas || null
+          };
+
+          const reserva = await api.post('/reservas', payload);
+
+          mostrarAlerta(`
+            🎉 <strong>¡Reserva Confirmada Exitosamente!</strong><br>
+            Código de Reserva: <strong>${reserva.codigo}</strong><br>
+            Puedes revisar y gestionar tu reserva en tu panel de usuario.
+          `, 'success');
+
+          setTimeout(() => {
+            window.location.href = '/mis-reservas.html';
+          }, 2000);
+        } catch (err) {
+          mostrarAlerta('No se pudo confirmar la reserva: ' + err.message, 'danger');
+          btn.disabled = false;
+          btn.textContent = 'Confirmar Reserva';
+        }
+      }
+
+      function mostrarAlerta(msg, tipo = 'danger') {
+        const box = document.getElementById('alert-box');
+        box.className = `alert alert-${tipo}`;
+        box.innerHTML = msg;
+        box.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  </script>
+</body>
+</html>

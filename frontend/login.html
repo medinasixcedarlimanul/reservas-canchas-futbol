@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión — SportReserve</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body style="justify-content: center; align-items: center;">
+  <div style="width: 100%; max-width: 440px; padding: 1.5rem;">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <a href="/index.html" class="brand-logo" style="justify-content: center; font-size: 1.8rem; margin-bottom: 0.5rem;">
+        ⚡ SportReserve
+      </a>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Ingresa a tu cuenta para gestionar tus reservas deportivas</p>
+    </div>
+
+    <div class="card">
+      <div id="alert-box" style="display: none;"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Correo Electrónico</label>
+          <input type="email" id="email" class="form-control" placeholder="ejemplo@correo.com" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Contraseña</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="btn-submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 0.5rem;">
+          Ingresar
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); font-size: 0.9rem;">
+        <span style="color: var(--text-muted);">¿No tienes una cuenta aún?</span>
+        <a href="/registro.html" style="color: var(--primary); font-weight: 600; margin-left: 0.25rem;">Regístrate</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Si ya está autenticado, redirigir
+      if (auth.isAuthenticated()) {
+        const user = auth.getUser();
+        redirectByUser(user);
+        return;
+      }
+
+      const form = document.getElementById('login-form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit');
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        btn.disabled = true;
+        btn.textContent = 'Verificando...';
+
+        try {
+          const res = await auth.login(email, password);
+          redirectByUser(res.usuario);
+        } catch (err) {
+          mostrarAlerta(err.message, 'danger');
+          btn.disabled = false;
+          btn.textContent = 'Ingresar';
+        }
+      });
+
+      function redirectByUser(user) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get('redirect');
+
+        if (redirectTo) {
+          window.location.href = redirectTo;
+          return;
+        }
+
+        if (user.rol === 'admin' || user.rol === 'superadmin') {
+          window.location.href = '/admin.html';
+        } else if (user.rol === 'recepcionista') {
+          window.location.href = '/recepcion.html';
+        } else {
+          window.location.href = '/index.html';
+        }
+      }
+
+      function mostrarAlerta(msg, tipo = 'danger') {
+        const box = document.getElementById('alert-box');
+        box.className = `alert alert-${tipo}`;
+        box.textContent = msg;
+        box.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

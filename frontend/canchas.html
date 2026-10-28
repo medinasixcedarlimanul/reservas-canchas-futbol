@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo de Canchas — SportReserve</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="navbar-slot"></div>
+
+  <main class="container">
+    <div class="card-header" style="margin-bottom: 2rem;">
+      <div>
+        <h1 style="font-size: 2.2rem;">Catálogo de Canchas</h1>
+        <p style="color: var(--text-muted);">Encuentra canchas por centro deportivo o disciplina y consulta su disponibilidad</p>
+      </div>
+    </div>
+
+    <!-- Filtros de Búsqueda -->
+    <div class="card" style="margin-bottom: 2rem; padding: 1.25rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="filter-negocio">Centro Deportivo (Negocio)</label>
+          <select id="filter-negocio" class="form-control">
+            <option value="">Todos los Centros</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="filter-deporte">Disciplina Deportiva</label>
+          <select id="filter-deporte" class="form-control">
+            <option value="">Todas las Disciplinas</option>
+          </select>
+        </div>
+
+        <div>
+          <button id="btn-filtrar" class="btn btn-primary" style="width: 100%;">
+            Aplicar Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Listado de Canchas -->
+    <div id="canchas-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+      <div class="card" style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-dim);">
+        Cargando catálogo...
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SportReserve Platform — Sistema Multi-Negocio de Reservas Deportivas.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialNegocioId = urlParams.get('negocio_id');
+
+      // 1. Cargar opciones en filtros
+      try {
+        const [negocios, deportes] = await Promise.all([
+          api.get('/negocios'),
+          api.get('/deportes')
+        ]);
+
+        const selectNegocio = document.getElementById('filter-negocio');
+        negocios.forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = n.id;
+          opt.textContent = n.nombre;
+          if (initialNegocioId && n.id == initialNegocioId) opt.selected = true;
+          selectNegocio.appendChild(opt);
+        });
+
+        const selectDeporte = document.getElementById('filter-deporte');
+        deportes.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.id;
+          opt.textContent = d.nombre;
+          selectDeporte.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Error cargando filtros:', err);
+      }
+
+      // 2. Función de carga de canchas
+      async function cargarCanchas() {
+        const negocioId = document.getElementById('filter-negocio').value;
+        const deporteId = document.getElementById('filter-deporte').value;
+        const container = document.getElementById('canchas-container');
+        container.innerHTML = `<div class="card" style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-dim);">Actualizando resultados...</div>`;
+
+        try {
+          let url = '/canchas?';
+          if (negocioId) url += `negocio_id=${negocioId}&`;
+          if (deporteId) url += `deporte_id=${deporteId}&`;
+
+          const canchas = await api.get(url);
+          if (canchas.length === 0) {
+            container.innerHTML = `
+              <div class="card" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                <p style="color: var(--text-muted); font-size: 1.1rem;">No se encontraron canchas con los filtros seleccionados.</p>
+              </div>
+            `;
+            return;
+          }
+
+          container.innerHTML = canchas.map(c => `
+            <div class="card">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                <span class="badge badge-info">${c.deporte_nombre}</span>
+                <span style="font-size: 0.85rem; color: var(--text-dim);">Capacidad: ${c.capacidad} jugadores</span>
+              </div>
+              <h3 style="font-size: 1.3rem; margin-bottom: 0.25rem;">${c.nombre}</h3>
+              <p style="font-size: 0.9rem; color: var(--primary); font-weight: 600; margin-bottom: 0.75rem;">
+                🏢 ${c.negocio_nombre}
+              </p>
+              <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem; min-height: 42px;">
+                ${c.descripcion || 'Instalación equipada con iluminación profesional y vestuarios.'}
+              </p>
+              <div style="font-size: 0.82rem; color: var(--text-dim); margin-bottom: 1rem;">
+                🕒 Horario: ${c.hora_apertura.slice(0, 5)} - ${c.hora_cierre.slice(0, 5)}
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--text-dim); display: block;">Precio / hora</span>
+                  <strong style="font-size: 1.25rem; color: var(--primary);">S/ ${parseFloat(c.precio_hora).toFixed(2)}</strong>
+                </div>
+                <a href="/reservar.html?cancha_id=${c.id}" class="btn btn-primary btn-sm">
+                  Ver Disponibilidad y Reservar
+                </a>
+              </div>
+            </div>
+          `).join('');
+        } catch (err) {
+          container.innerHTML = `<div class="card alert alert-danger" style="grid-column: 1/-1;">Error al cargar canchas: ${err.message}</div>`;
+        }
+      }
+
+      document.getElementById('btn-filtrar').addEventListener('click', cargarCanchas);
+      cargarCanchas();
+    });
+  </script>
+</body>
+</html>
