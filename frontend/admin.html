@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración — SportReserve</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="navbar-slot"></div>
+
+  <main class="container">
+    <div class="card-header" style="margin-bottom: 2rem;">
+      <div>
+        <h1 style="font-size: 2.2rem;">Panel Administrativo & Métricas</h1>
+        <p style="color: var(--text-muted);">Control integral de negocio, canchas, promociones y reportes financieros</p>
+      </div>
+      <div id="negocio-selector-wrapper" style="display: none; align-items: center; gap: 0.75rem;">
+        <label for="admin-negocio-select" class="form-label" style="margin-bottom: 0;">Sede:</label>
+        <select id="admin-negocio-select" class="form-control" style="width: auto; padding: 0.4rem 1rem;">
+          <!-- Dinámico para superadmin -->
+        </select>
+      </div>
+    </div>
+
+    <div id="alert-box" style="display: none;"></div>
+
+    <!-- Pestañas de Navegación del Administrador -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap: wrap;">
+      <button class="btn btn-secondary tab-btn active" onclick="switchAdminTab('dashboard', this)">
+        📊 Métricas & KPIs
+      </button>
+      <button class="btn btn-secondary tab-btn" onclick="switchAdminTab('canchas', this)">
+        ⚽ Gestión de Canchas
+      </button>
+      <button class="btn btn-secondary tab-btn" onclick="switchAdminTab('cupones', this)">
+        🎟️ Promociones & Cupones
+      </button>
+    </div>
+
+    <!-- SECCIÓN 1: DASHBOARD & REPORTES -->
+    <section id="tab-dashboard">
+      <!-- Filtro de Fechas -->
+      <div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+        <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="reporte-desde">Fecha Desde</label>
+            <input type="date" id="reporte-desde" class="form-control">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="reporte-hasta">Fecha Hasta</label>
+            <input type="date" id="reporte-hasta" class="form-control">
+          </div>
+          <button onclick="cargarDashboard()" class="btn btn-primary">Actualizar Métricas</button>
+        </div>
+      </div>
+
+      <!-- Tarjetas KPI -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div class="card" style="border-left: 4px solid var(--primary);">
+          <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">
+            Ingresos Totales (Rango)
+          </div>
+          <div id="kpi-ingresos" style="font-size: 2.2rem; font-weight: 800; color: var(--primary); margin-top: 0.5rem;">
+            S/ 0.00
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem;">Cobrado a través de todos los métodos</p>
+        </div>
+
+        <div class="card" style="border-left: 4px solid var(--accent);">
+          <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">
+            Reservas Registradas
+          </div>
+          <div id="kpi-reservas" style="font-size: 2.2rem; font-weight: 800; color: var(--accent); margin-top: 0.5rem;">
+            0
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem;">En el período seleccionado</p>
+        </div>
+
+        <div class="card" style="border-left: 4px solid var(--warning);">
+          <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">
+            Caja Mensual Base
+          </div>
+          <div id="kpi-caja" style="font-size: 2.2rem; font-weight: 800; color: var(--warning); margin-top: 0.5rem;">
+            S/ 0.00
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem;">Monto inicial configurado del mes</p>
+        </div>
+      </div>
+
+      <!-- Desglose Gráfico / Tablas -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+        <!-- Desglose por método de pago -->
+        <div class="card">
+          <h2 style="font-size: 1.2rem; margin-bottom: 1rem;">Ingresos por Método de Pago</h2>
+          <div id="tabla-metodos-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Método</th>
+                  <th>Transacciones</th>
+                  <th style="text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-ingresos-metodo">
+                <tr><td colspan="3" style="text-align: center; color: var(--text-dim);">Sin datos</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Reservas por Estado -->
+        <div class="card">
+          <h2 style="font-size: 1.2rem; margin-bottom: 1rem;">Estado de las Reservas</h2>
+          <div id="tabla-estados-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th style="text-align: right;">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-estados">
+                <tr><td colspan="2" style="text-align: center; color: var(--text-dim);">Sin datos</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rendimiento por Cancha -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+          <h2 style="font-size: 1.2rem;">Rendimiento y Ocupación por Cancha</h2>
+        </div>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Cancha</th>
+                <th>Total Reservas</th>
+                <th style="text-align: right;">Ingresos Generados</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-rendimiento-canchas">
+              <tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 2rem;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: GESTIÓN DE CANCHAS -->
+    <section id="tab-canchas" style="display: none;">
+      <div class="card-header" style="margin-bottom: 1.5rem;">
+        <div>
+          <h2>Catálogo de Canchas de la Sede</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Habilita, edita tarifas o crea nuevas canchas deportivas</p>
+        </div>
+        <button onclick="abrirModalCancha()" class="btn btn-primary">+ Nueva Cancha</button>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Deporte</th>
+                <th>Tarifa / Hora</th>
+                <th>Horario</th>
+                <th>Características</th>
+                <th>Estado</th>
+                <th style="text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-gestion-canchas">
+              <tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">Cargando canchas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 3: PROMOCIONES Y CUPONES -->
+    <section id="tab-cupones" style="display: none;">
+      <div class="card-header" style="margin-bottom: 1.5rem;">
+        <div>
+          <h2>Cupones de Descuento</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Crea promociones para fidelizar y captar clientes</p>
+        </div>
+        <button onclick="abrirModalCupon()" class="btn btn-primary">+ Nuevo Cupón</button>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Vigencia</th>
+                <th>Usos (Usados / Máx)</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-gestion-cupones">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">Cargando cupones...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL CREAR / EDITAR CANCHA -->
+  <div id="modal-cancha" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="card" style="max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+      <div class="card-header" style="margin-bottom: 1.5rem;">
+        <h2 id="modal-cancha-title" style="font-size: 1.3rem;">Nueva Cancha</h2>
+        <button onclick="cerrarModalCancha()" class="btn btn-secondary btn-sm">✕</button>
+      </div>
+      <form id="form-cancha">
+        <input type="hidden" id="cancha-id">
+        <div class="form-group">
+          <label class="form-label" for="cancha-nombre">Nombre de la Cancha *</label>
+          <input type="text" id="cancha-nombre" class="form-control" placeholder="Ej. Cancha Sintética Pro 1" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="cancha-deporte">Deporte *</label>
+            <select id="cancha-deporte" class="form-control" required>
+              <!-- Dinámico de /api/deportes -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cancha-precio">Precio por Hora (S/) *</label>
+            <input type="number" step="0.5" id="cancha-precio" class="form-control" placeholder="60.00" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="cancha-apertura">Hora Apertura (HH:MM) *</label>
+            <input type="time" id="cancha-apertura" class="form-control" value="07:00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cancha-cierre">Hora Cierre (HH:MM) *</label>
+            <input type="time" id="cancha-cierre" class="form-control" value="23:00" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cancha-superficie">Tipo de Superficie</label>
+          <input type="text" id="cancha-superficie" class="form-control" placeholder="Ej. Césped sintético monofilamento">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+          <div>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="cancha-techada"> Techada
+            </label>
+          </div>
+          <div>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="cancha-iluminacion" checked> Con Iluminación LED
+            </label>
+          </div>
+        </div>
+        <div class="form-group" id="cancha-estado-group" style="display: none;">
+          <label class="form-label" for="cancha-estado">Estado de la Cancha</label>
+          <select id="cancha-estado" class="form-control">
+            <option value="disponible">Disponible</option>
+            <option value="mantenimiento">En Mantenimiento</option>
+            <option value="inactiva">Inactiva</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+          <button type="button" onclick="cerrarModalCancha()" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-cancha">Guardar Cancha</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CREAR CUPÓN -->
+  <div id="modal-cupon" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="card" style="max-width: 500px; width: 100%;">
+      <div class="card-header" style="margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.3rem;">Nuevo Cupón de Descuento</h2>
+        <button onclick="cerrarModalCupon()" class="btn btn-secondary btn-sm">✕</button>
+      </div>
+      <form id="form-cupon">
+        <div class="form-group">
+          <label class="form-label" for="cupon-codigo">Código del Cupón *</label>
+          <input type="text" id="cupon-codigo" class="form-control" placeholder="Ej. VERANO2026" style="text-transform: uppercase;" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="cupon-tipo">Tipo de Descuento *</label>
+            <select id="cupon-tipo" class="form-control" required>
+              <option value="porcentaje">Porcentaje (%)</option>
+              <option value="fijo">Monto Fijo (S/)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cupon-valor">Valor del Descuento *</label>
+            <input type="number" step="0.5" id="cupon-valor" class="form-control" placeholder="10" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="cupon-vence">Fecha de Vencimiento *</label>
+            <input type="date" id="cupon-vence" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cupon-limite">Límite de Usos</label>
+            <input type="number" id="cupon-limite" class="form-control" placeholder="50">
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+          <button type="button" onclick="cerrarModalCupon()" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Cupón</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>© 2026 SportReserve Platform — Sistema Multi-Negocio de Reservas Deportivas</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    let activeNegocioId = null;
+    let deportesList = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Guard de autenticación y rol
+      if (!auth.requireRole(['admin', 'superadmin'])) return;
+
+      const user = auth.getUser();
+      activeNegocioId = user.negocio_id;
+
+      // Si es superadmin, permitir seleccionar negocio
+      if (user.rol === 'superadmin') {
+        const selectorWrapper = document.getElementById('negocio-selector-wrapper');
+        selectorWrapper.style.display = 'flex';
+        await cargarNegociosSelector();
+      }
+
+      // 2. Establecer fechas por defecto en dashboard (mes actual)
+      const hoy = new Date();
+      const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      document.getElementById('reporte-desde').value = primerDia.toISOString().split('T')[0];
+      document.getElementById('reporte-hasta').value = hoy.toISOString().split('T')[0];
+
+      // 3. Cargar Deportes disponibles
+      await cargarDeportes();
+
+      // 4. Cargar Tab inicial (dashboard)
+      await cargarDashboard();
+    });
+
+    async function cargarNegociosSelector() {
+      try {
+        const negocios = await api.get('/negocios');
+        const sel = document.getElementById('admin-negocio-select');
+        sel.innerHTML = negocios.map(n => `<option value="${n.id}">${n.nombre}</option>`).join('');
+        if (negocios.length > 0) {
+          activeNegocioId = negocios[0].id;
+          sel.addEventListener('change', (e) => {
+            activeNegocioId = parseInt(e.target.value, 10);
+            recargarTabActivo();
+          });
+        }
+      } catch (err) {
+        mostrarAlerta('Error al cargar la lista de sedes', 'danger');
+      }
+    }
+
+    async function cargarDeportes() {
+      try {
+        deportesList = await api.get('/deportes');
+        const sel = document.getElementById('cancha-deporte');
+        sel.innerHTML = deportesList.map(d => `<option value="${d.id}">${d.nombre}</option>`).join('');
+      } catch (err) {
+        console.error('Error cargando deportes:', err);
+      }
+    }
+
+    function switchAdminTab(tabName, btnElement) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      btnElement.classList.add('active');
+
+      document.getElementById('tab-dashboard').style.display = 'none';
+      document.getElementById('tab-canchas').style.display = 'none';
+      document.getElementById('tab-cupones').style.display = 'none';
+
+      document.getElementById(`tab-${tabName}`).style.display = 'block';
+
+      if (tabName === 'dashboard') cargarDashboard();
+      if (tabName === 'canchas') cargarCanchas();
+      if (tabName === 'cupones') cargarCupones();
+    }
+
+    function recargarTabActivo() {
+      if (document.getElementById('tab-dashboard').style.display !== 'none') cargarDashboard();
+      if (document.getElementById('tab-canchas').style.display !== 'none') cargarCanchas();
+      if (document.getElementById('tab-cupones').style.display !== 'none') cargarCupones();
+    }
+
+    // ==========================================
+    // MÉTRICAS & REPORTES
+    // ==========================================
+    async function cargarDashboard() {
+      if (!activeNegocioId) return;
+
+      const desde = document.getElementById('reporte-desde').value;
+      const hasta = document.getElementById('reporte-hasta').value;
+
+      try {
+        const data = await api.get(`/reportes/dashboard?negocio_id=${activeNegocioId}&desde=${desde}&hasta=${hasta}`);
+        
+        // KPIs
+        document.getElementById('kpi-ingresos').textContent = `S/ ${parseFloat(data.kpis.total_ingresos || 0).toFixed(2)}`;
+        document.getElementById('kpi-reservas').textContent = data.kpis.total_reservas || 0;
+        document.getElementById('kpi-caja').textContent = `S/ ${parseFloat(data.kpis.monto_inicial_mes || 0).toFixed(2)}`;
+
+        // Métodos de pago
+        const tablaMetodos = document.getElementById('tabla-ingresos-metodo');
+        if (!data.ingresos_por_metodo || data.ingresos_por_metodo.length === 0) {
+          tablaMetodos.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-dim);">No hay cobros en este rango</td></tr>`;
+        } else {
+          tablaMetodos.innerHTML = data.ingresos_por_metodo.map(m => `
+            <tr>
+              <td><strong>${m.metodo.toUpperCase()}</strong></td>
+              <td>${m.transacciones} transacciones</td>
+              <td style="text-align: right; font-weight: 700; color: var(--primary);">S/ ${parseFloat(m.total).toFixed(2)}</td>
+            </tr>
+          `).join('');
+        }
+
+        // Estado de reservas
+        const tablaEstados = document.getElementById('tabla-estados');
+        if (!data.reservas_por_estado || data.reservas_por_estado.length === 0) {
+          tablaEstados.innerHTML = `<tr><td colspan="2" style="text-align: center; color: var(--text-dim);">No hay reservas en este rango</td></tr>`;
+        } else {
+          tablaEstados.innerHTML = data.reservas_por_estado.map(e => `
+            <tr>
+              <td>
+                <span class="badge ${e.estado === 'completada' ? 'badge-success' : e.estado === 'confirmada' ? 'badge-primary' : e.estado === 'cancelada' ? 'badge-danger' : 'badge-warning'}">
+                  ${e.estado.toUpperCase()}
+                </span>
+              </td>
+              <td style="text-align: right; font-weight: 700;">${e.total}</td>
+            </tr>
+          `).join('');
+        }
+
+        // Rendimiento canchas
+        const tablaCanchas = document.getElementById('tabla-rendimiento-canchas');
+        if (!data.canchas_rendimiento || data.canchas_rendimiento.length === 0) {
+          tablaCanchas.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 2rem;">Sin datos de canchas</td></tr>`;
+        } else {
+          tablaCanchas.innerHTML = data.canchas_rendimiento.map(c => `
+            <tr>
+              <td style="font-weight: 600;">${c.nombre}</td>
+              <td>${c.total_reservas} reservas</td>
+              <td style="text-align: right; font-weight: 700; color: var(--primary);">S/ ${parseFloat(c.ingresos_generados).toFixed(2)}</td>
+            </tr>
+          `).join('');
+        }
+
+      } catch (err) {
+        mostrarAlerta(err.message || 'Error cargando métricas', 'danger');
+      }
+    }
+
+    // ==========================================
+    // GESTIÓN DE CANCHAS
+    // ==========================================
+    async function cargarCanchas() {
+      if (!activeNegocioId) return;
+      try {
+        const canchas = await api.get(`/canchas?negocio_id=${activeNegocioId}`);
+        const tbody = document.getElementById('tabla-gestion-canchas');
+        if (canchas.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 2rem;">No hay canchas registradas en esta sede</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = canchas.map(c => `
+          <tr>
+            <td>#${c.id}</td>
+            <td style="font-weight: 700;">${c.nombre}</td>
+            <td>${c.deporte_nombre || 'N/A'}</td>
+            <td style="color: var(--primary); font-weight: 700;">S/ ${parseFloat(c.precio_por_hora).toFixed(2)}</td>
+            <td style="font-size: 0.85rem;">${c.hora_apertura} - ${c.hora_cierre}</td>
+            <td style="font-size: 0.85rem; color: var(--text-dim);">
+              ${c.techada ? '🏠 Techada' : '☀️ Descubierta'} • ${c.iluminacion ? '💡 Luces' : 'Sin luces'}
+            </td>
+            <td>
+              <span class="badge ${c.estado === 'disponible' ? 'badge-success' : c.estado === 'mantenimiento' ? 'badge-warning' : 'badge-danger'}">
+                ${c.estado}
+              </span>
+            </td>
+            <td style="text-align: right;">
+              <button onclick='editarCancha(${JSON.stringify(c)})' class="btn btn-secondary btn-sm">Editar</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        mostrarAlerta(err.message || 'Error cargando canchas', 'danger');
+      }
+    }
+
+    function abrirModalCancha() {
+      document.getElementById('modal-cancha-title').textContent = 'Nueva Cancha Deportiva';
+      document.getElementById('cancha-id').value = '';
+      document.getElementById('form-cancha').reset();
+      document.getElementById('cancha-estado-group').style.display = 'none';
+      document.getElementById('modal-cancha').style.display = 'flex';
+    }
+
+    function cerrarModalCancha() {
+      document.getElementById('modal-cancha').style.display = 'none';
+    }
+
+    function editarCancha(c) {
+      document.getElementById('modal-cancha-title').textContent = `Editar Cancha: ${c.nombre}`;
+      document.getElementById('cancha-id').value = c.id;
+      document.getElementById('cancha-nombre').value = c.nombre;
+      document.getElementById('cancha-deporte').value = c.deporte_id;
+      document.getElementById('cancha-precio').value = c.precio_por_hora;
+      document.getElementById('cancha-apertura').value = c.hora_apertura.substring(0, 5);
+      document.getElementById('cancha-cierre').value = c.hora_cierre.substring(0, 5);
+      document.getElementById('cancha-superficie').value = c.tipo_superficie || '';
+      document.getElementById('cancha-techada').checked = Boolean(c.techada);
+      document.getElementById('cancha-iluminacion').checked = Boolean(c.iluminacion);
+      document.getElementById('cancha-estado').value = c.estado;
+      document.getElementById('cancha-estado-group').style.display = 'block';
+      document.getElementById('modal-cancha').style.display = 'flex';
+    }
+
+    document.getElementById('form-cancha').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('cancha-id').value;
+      const payload = {
+        negocio_id: activeNegocioId,
+        deporte_id: parseInt(document.getElementById('cancha-deporte').value, 10),
+        nombre: document.getElementById('cancha-nombre').value,
+        precio_por_hora: parseFloat(document.getElementById('cancha-precio').value),
+        hora_apertura: document.getElementById('cancha-apertura').value + ':00',
+        hora_cierre: document.getElementById('cancha-cierre').value + ':00',
+        tipo_superficie: document.getElementById('cancha-superficie').value || null,
+        techada: document.getElementById('cancha-techada').checked ? 1 : 0,
+        iluminacion: document.getElementById('cancha-iluminacion').checked ? 1 : 0
+      };
+
+      try {
+        if (id) {
+          payload.estado = document.getElementById('cancha-estado').value;
+          await api.put(`/canchas/${id}`, payload, { 'x-negocio-id': activeNegocioId });
+          mostrarAlerta('Cancha actualizada correctamente', 'success');
+        } else {
+          await api.post('/canchas', payload, { 'x-negocio-id': activeNegocioId });
+          mostrarAlerta('Cancha creada con éxito', 'success');
+        }
+        cerrarModalCancha();
+        cargarCanchas();
+      } catch (err) {
+        mostrarAlerta(err.message || 'Error guardando cancha', 'danger');
+      }
+    });
+
+    // ==========================================
+    // GESTIÓN DE CUPONES
+    // ==========================================
+    async function cargarCupones() {
+      if (!activeNegocioId) return;
+      try {
+        const cupones = await api.get(`/cupones?negocio_id=${activeNegocioId}`);
+        const tbody = document.getElementById('tabla-gestion-cupones');
+        if (cupones.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">No hay cupones creados para esta sede</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = cupones.map(cp => `
+          <tr>
+            <td><strong style="color: var(--primary); font-family: monospace; font-size: 1.05rem;">${cp.codigo}</strong></td>
+            <td><span class="badge ${cp.tipo_descuento === 'porcentaje' ? 'badge-primary' : 'badge-accent'}">${cp.tipo_descuento}</span></td>
+            <td style="font-weight: 700;">${cp.tipo_descuento === 'porcentaje' ? cp.valor_descuento + '%' : 'S/ ' + parseFloat(cp.valor_descuento).toFixed(2)}</td>
+            <td>${cp.fecha_vencimiento ? cp.fecha_vencimiento.substring(0, 10) : 'Sin límite'}</td>
+            <td>${cp.usos_actuales} / ${cp.limite_usos || '∞'}</td>
+            <td>
+              <span class="badge ${cp.activo ? 'badge-success' : 'badge-danger'}">
+                ${cp.activo ? 'Activo' : 'Inactivo'}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        mostrarAlerta(err.message || 'Error cargando cupones', 'danger');
+      }
+    }
+
+    function abrirModalCupon() {
+      document.getElementById('form-cupon').reset();
+      document.getElementById('modal-cupon').style.display = 'flex';
+    }
+
+    function cerrarModalCupon() {
+      document.getElementById('modal-cupon').style.display = 'none';
+    }
+
+    document.getElementById('form-cupon').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        negocio_id: activeNegocioId,
+        codigo: document.getElementById('cupon-codigo').value.trim().toUpperCase(),
+        tipo_descuento: document.getElementById('cupon-tipo').value,
+        valor_descuento: parseFloat(document.getElementById('cupon-valor').value),
+        fecha_vencimiento: document.getElementById('cupon-vence').value,
+        limite_usos: document.getElementById('cupon-limite').value ? parseInt(document.getElementById('cupon-limite').value, 10) : null
+      };
+
+      try {
+        await api.post('/cupones', payload);
+        mostrarAlerta('Cupón creado exitosamente', 'success');
+        cerrarModalCupon();
+        cargarCupones();
+      } catch (err) {
+        mostrarAlerta(err.message || 'Error creando cupón', 'danger');
+      }
+    });
+
+    function mostrarAlerta(msg, tipo = 'danger') {
+      const box = document.getElementById('alert-box');
+      box.className = `alert alert-${tipo}`;
+      box.textContent = msg;
+      box.style.display = 'block';
+      setTimeout(() => { box.style.display = 'none'; }, 4500);
+    }
+  </script>
+</body>
+</html>

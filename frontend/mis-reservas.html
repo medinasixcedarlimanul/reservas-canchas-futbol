@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Reservas — SportReserve</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="navbar-slot"></div>
+
+  <main class="container">
+    <div class="card-header" style="margin-bottom: 2rem;">
+      <div>
+        <h1 style="font-size: 2.2rem;">Mis Reservas</h1>
+        <p style="color: var(--text-muted);">Historial de reservas activas y pasadas en todos los centros deportivos</p>
+      </div>
+      <a href="/reservar.html" class="btn btn-primary btn-sm">+ Nueva Reserva</a>
+    </div>
+
+    <div id="alert-box" style="display: none;"></div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Cancha & Deporte</th>
+              <th>Centro Deportivo</th>
+              <th>Fecha</th>
+              <th>Horario</th>
+              <th>Estado</th>
+              <th style="text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="reservas-tbody">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-dim);">
+                Cargando tus reservas...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SportReserve Platform — Sistema Multi-Negocio de Reservas Deportivas.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      auth.requireAuth();
+      cargarMisReservas();
+    });
+
+    async function cargarMisReservas() {
+      const tbody = document.getElementById('reservas-tbody');
+
+      try {
+        const reservas = await api.get('/reservas');
+
+        if (reservas.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                Aún no tienes reservas registradas.<br><br>
+                <a href="/reservar.html" class="btn btn-primary btn-sm">Haz tu primera reserva</a>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = reservas.map(r => {
+          let badgeClass = 'badge-info';
+          if (r.estado === 'confirmada') badgeClass = 'badge-success';
+          if (r.estado === 'completada') badgeClass = 'badge-info';
+          if (r.estado === 'cancelada') badgeClass = 'badge-danger';
+          if (r.estado === 'pendiente') badgeClass = 'badge-warning';
+
+          const canCancel = r.estado === 'confirmada' || r.estado === 'pendiente';
+
+          return `
+            <tr>
+              <td><strong style="color: var(--accent); font-family: monospace;">${r.codigo}</strong></td>
+              <td>
+                <div style="font-weight: 600;">${r.cancha_nombre}</div>
+                <small style="color: var(--text-dim);">${r.deporte_nombre}</small>
+              </td>
+              <td>${r.negocio_nombre}</td>
+              <td><strong>${r.fecha.slice(0, 10)}</strong></td>
+              <td>${r.hora_inicio.slice(0, 5)} - ${r.hora_fin.slice(0, 5)}</td>
+              <td><span class="badge ${badgeClass}">${r.estado}</span></td>
+              <td style="text-align: right;">
+                ${canCancel ? `
+                  <button onclick="cancelarReserva(${r.id}, '${r.codigo}')" class="btn btn-danger btn-sm">
+                    Cancelar
+                  </button>
+                ` : `<span style="color: var(--text-dim); font-size: 0.85rem;">—</span>`}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        mostrarAlerta('Error cargando reservas: ' + err.message, 'danger');
+      }
+    }
+
+    async function cancelarReserva(id, codigo) {
+      if (!confirm(`¿Estás seguro de que deseas cancelar la reserva ${codigo}?`)) {
+        return;
+      }
+
+      try {
+        await api.put(`/reservas/${id}/cancelar`, {});
+        mostrarAlerta(`Reserva <strong>${codigo}</strong> cancelada correctamente.`, 'success');
+        cargarMisReservas();
+      } catch (err) {
+        mostrarAlerta('No se pudo cancelar la reserva: ' + err.message, 'danger');
+      }
+    }
+
+    function mostrarAlerta(msg, tipo = 'danger') {
+      const box = document.getElementById('alert-box');
+      box.className = `alert alert-${tipo}`;
+      box.innerHTML = msg;
+      box.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

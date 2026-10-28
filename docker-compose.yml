@@ -40,6 +40,8 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app/frontend:ro
     depends_on:
       db:
         condition: service_healthy

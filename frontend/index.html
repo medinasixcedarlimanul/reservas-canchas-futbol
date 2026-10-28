@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SportReserve — Plataforma Multi-Negocio de Reservas Deportivas</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="navbar-slot"></div>
+
+  <!-- Hero Section -->
+  <header style="padding: 4rem 1.5rem 3rem; text-align: center; position: relative;">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <span class="badge badge-success" style="margin-bottom: 1rem;">Plataforma Oficial Multi-Sede</span>
+      <h1 style="font-size: 3rem; margin-bottom: 1rem; letter-spacing: -0.02em;">
+        Reserva tu Cancha Favorita en Cualquier Centro Deportivo
+      </h1>
+      <p style="font-size: 1.15rem; color: var(--text-muted); margin-bottom: 2rem;">
+        Fútbol, pádel, básquetbol y más. Explora disponibilidad en tiempo real, reserva al instante y asegura tu horario de juego.
+      </p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/reservar.html" class="btn btn-primary btn-lg">Reservar Ahora</a>
+        <a href="/canchas.html" class="btn btn-secondary btn-lg">Ver Canchas y Tarifas</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Centros Deportivos (Negocios) -->
+    <section style="margin-bottom: 3.5rem;">
+      <div class="card-header" style="margin-bottom: 1.5rem;">
+        <div>
+          <h2>Centros Deportivos Asociados</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Complejos con canchas profesionales disponibles en la plataforma</p>
+        </div>
+      </div>
+      <div id="negocios-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+        <!-- Se llena dinámicamente -->
+        <div class="card" style="text-align: center; color: var(--text-dim); padding: 3rem;">
+          Cargando centros deportivos...
+        </div>
+      </div>
+    </section>
+
+    <!-- Canchas Destacadas -->
+    <section>
+      <div class="card-header" style="margin-bottom: 1.5rem;">
+        <div>
+          <h2>Canchas Disponibles</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Explora los espacios deportivos con iluminación, vestuarios y césped sintético</p>
+        </div>
+        <a href="/canchas.html" class="btn btn-secondary btn-sm">Ver Todas</a>
+      </div>
+      <div id="canchas-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+        <!-- Se llena dinámicamente -->
+        <div class="card" style="text-align: center; color: var(--text-dim); padding: 3rem;">
+          Cargando catálogo de canchas...
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SportReserve Platform — Sistema Multi-Negocio de Reservas Deportivas. Todos los derechos reservados.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Cargar Negocios
+      try {
+        const negocios = await api.get('/negocios');
+        const negociosGrid = document.getElementById('negocios-grid');
+        if (negocios.length === 0) {
+          negociosGrid.innerHTML = `
+            <div class="card" style="grid-column: 1/-1; text-align: center; padding: 2.5rem;">
+              <p style="color: var(--text-muted);">Aún no hay centros deportivos registrados en el sistema.</p>
+            </div>
+          `;
+        } else {
+          negociosGrid.innerHTML = negocios.map(n => `
+            <div class="card">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                <h3 style="font-size: 1.25rem;">${n.nombre}</h3>
+                <span class="badge badge-success">Activo</span>
+              </div>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+                📍 ${n.direccion || 'Ubicación céntrica'}
+              </p>
+              <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.25rem;">
+                📞 ${n.telefono || 'Sin teléfono'} | ✉️ ${n.email || 'Sin correo'}
+              </div>
+              <a href="/canchas.html?negocio_id=${n.id}" class="btn btn-secondary btn-sm" style="width: 100%;">
+                Ver Canchas de este Centro
+              </a>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Error cargando negocios:', err);
+      }
+
+      // 2. Cargar Canchas Destacadas
+      try {
+        const canchas = await api.get('/canchas');
+        const canchasGrid = document.getElementById('canchas-grid');
+        if (canchas.length === 0) {
+          canchasGrid.innerHTML = `
+            <div class="card" style="grid-column: 1/-1; text-align: center; padding: 2.5rem;">
+              <p style="color: var(--text-muted);">No hay canchas registradas en este momento.</p>
+            </div>
+          `;
+        } else {
+          canchasGrid.innerHTML = canchas.slice(0, 6).map(c => `
+            <div class="card">
+              <div style="margin-bottom: 0.75rem;">
+                <span class="badge badge-info" style="margin-bottom: 0.5rem;">${c.deporte_nombre}</span>
+                <h3 style="font-size: 1.2rem;">${c.nombre}</h3>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">🏢 ${c.negocio_nombre}</span>
+              </div>
+              <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem; min-height: 40px;">
+                ${c.descripcion || 'Cancha equipada con iluminación nocturna y vestuarios.'}
+              </p>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--text-dim); display: block;">Precio / hora</span>
+                  <strong style="font-size: 1.2rem; color: var(--primary);">S/ ${parseFloat(c.precio_hora).toFixed(2)}</strong>
+                </div>
+                <a href="/reservar.html?cancha_id=${c.id}" class="btn btn-primary btn-sm">
+                  Reservar
+                </a>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Error cargando canchas:', err);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recepción & Control de Caja — SportReserve</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="navbar-slot"></div>
+
+  <main class="container">
+    <div class="card-header" style="margin-bottom: 2rem;">
+      <div>
+        <h1 style="font-size: 2.2rem;">Panel de Recepción & Caja</h1>
+        <p style="color: var(--text-muted);">Gestión de turnos de caja, check-in de asistencia y cobro en ventanilla</p>
+      </div>
+      <div id="turno-status-badge">
+        <!-- Badge de caja dinámico -->
+      </div>
+    </div>
+
+    <div id="alert-box" style="display: none;"></div>
+
+    <!-- Pestañas de Navegación Interna -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+      <button class="btn btn-secondary tab-btn active" onclick="switchTab('checkin', this)">
+        📋 Check-in & Reservas
+      </button>
+      <button class="btn btn-secondary tab-btn" onclick="switchTab('caja', this)">
+        💰 Control de Caja
+      </button>
+      <button class="btn btn-secondary tab-btn" onclick="switchTab('ventanilla', this)">
+        ➕ Nueva Reserva en Ventanilla
+      </button>
+    </div>
+
+    <!-- SECCIÓN 1: CHECK-IN Y RESERVAS -->
+    <section id="tab-checkin">
+      <div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+        <div style="display: flex; gap: 1rem; align-items: flex-end;">
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label class="form-label" for="search-codigo">Buscar por Código de Reserva o Cliente</label>
+            <input type="text" id="search-codigo" class="form-control" placeholder="Ej. RES-A1B2C3 o nombre del cliente">
+          </div>
+          <button onclick="buscarReservas()" class="btn btn-primary">Buscar</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>Cancha</th>
+                <th>Fecha & Horario</th>
+                <th>Estado</th>
+                <th>Check-in</th>
+                <th style="text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-reservas-recepcion">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-dim);">
+                  Cargando reservas del negocio...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: CONTROL DE CAJA -->
+    <section id="tab-caja" style="display: none;">
+      <div id="caja-view">
+        <!-- Render dinámico según si la caja está abierta o cerrada -->
+      </div>
+    </section>
+
+    <!-- SECCIÓN 3: RESERVA EN VENTANILLA -->
+    <section id="tab-ventanilla" style="display: none;">
+      <div class="card" style="max-width: 680px; margin: 0 auto;">
+        <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem;">Registro de Reserva Presencial (Ventanilla)</h2>
+        <form id="form-ventanilla">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="vent-nombre">Nombre del Cliente *</label>
+              <input type="text" id="vent-nombre" class="form-control" placeholder="Nombre completo" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="vent-dni">DNI / Documento *</label>
+              <input type="text" id="vent-dni" class="form-control" placeholder="8 dígitos" required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="vent-cancha">Cancha *</label>
+              <select id="vent-cancha" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="vent-fecha">Fecha *</label>
+              <input type="date" id="vent-fecha" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vent-horario">Horario de Inicio *</label>
+            <select id="vent-horario" class="form-control" required></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vent-notas">Notas</label>
+            <textarea id="vent-notas" class="form-control" rows="2" placeholder="Observaciones adicionales"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+            Registrar Reserva en Ventanilla
+          </button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 SportReserve Platform — Sistema Multi-Negocio de Reservas Deportivas.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    let activeTurno = null;
+    let canchasNegocio = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      auth.requireRole('superadmin', 'admin', 'recepcionista');
+      cargarReservasRecepcion();
+      cargarEstadoCaja();
+      cargarCanchasParaVentanilla();
+    });
+
+    window.switchTab = function(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.add('btn-secondary'));
+      btn.classList.remove('btn-secondary');
+      btn.classList.add('btn-primary', 'active');
+
+      document.getElementById('tab-checkin').style.display = tabId === 'checkin' ? 'block' : 'none';
+      document.getElementById('tab-caja').style.display = tabId === 'caja' ? 'block' : 'none';
+      document.getElementById('tab-ventanilla').style.display = tabId === 'ventanilla' ? 'block' : 'none';
+
+      if (tabId === 'caja') cargarEstadoCaja();
+    };
+
+    // 1. CARGA Y BÚSQUEDA DE RESERVAS
+    async function cargarReservasRecepcion() {
+      const tbody = document.getElementById('tabla-reservas-recepcion');
+      try {
+        const reservas = await api.get('/reservas');
+        renderTablaReservas(reservas);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="alert alert-danger">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function buscarReservas() {
+      const termino = document.getElementById('search-codigo').value.trim().toUpperCase();
+      if (!termino) {
+        cargarReservasRecepcion();
+        return;
+      }
+
+      try {
+        const reservas = await api.get('/reservas');
+        const filtradas = reservas.filter(r => 
+          r.codigo.includes(termino) || 
+          (r.cliente_nombre && r.cliente_nombre.toUpperCase().includes(termino)) ||
+          (r.usuario_nombre && r.usuario_nombre.toUpperCase().includes(termino))
+        );
+        renderTablaReservas(filtradas);
+      } catch (err) {
+        mostrarAlerta('Error en la búsqueda: ' + err.message, 'danger');
+      }
+    }
+
+    function renderTablaReservas(reservas) {
+      const tbody = document.getElementById('tabla-reservas-recepcion');
+      if (reservas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-dim);">No se encontraron reservas.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = reservas.map(r => `
+        <tr>
+          <td><strong style="color: var(--accent); font-family: monospace;">${r.codigo}</strong></td>
+          <td>
+            <strong>${r.cliente_nombre || r.usuario_nombre}</strong>
+            <div style="font-size: 0.8rem; color: var(--text-dim);">${r.cliente_dni || r.usuario_email}</div>
+          </td>
+          <td>${r.cancha_nombre}</td>
+          <td>${r.fecha.slice(0, 10)} <span style="color: var(--text-muted); font-size: 0.85rem;">(${r.hora_inicio.slice(0, 5)})</span></td>
+          <td><span class="badge ${r.estado === 'confirmada' ? 'badge-success' : r.estado === 'completada' ? 'badge-info' : 'badge-danger'}">${r.estado}</span></td>
+          <td>
+            ${r.checkin_at ? `<span class="badge badge-success">✓ ${r.checkin_at.slice(11, 16)}</span>` : `<span style="color: var(--text-dim);">Pendiente</span>`}
+          </td>
+          <td style="text-align: right;">
+            ${!r.checkin_at && r.estado !== 'cancelada' ? `
+              <button onclick="hacerCheckIn(${r.id}, '${r.codigo}')" class="btn btn-primary btn-sm">
+                Confirmar Check-in
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function hacerCheckIn(id, codigo) {
+      try {
+        await api.put(`/reservas/${id}/checkin`, {});
+        mostrarAlerta(`Check-in confirmado para la reserva <strong>${codigo}</strong>`, 'success');
+        cargarReservasRecepcion();
+      } catch (err) {
+        mostrarAlerta('Error registrando check-in: ' + err.message, 'danger');
+      }
+    }
+
+    // 2. CONTROL DE CAJA
+    async function cargarEstadoCaja() {
+      const container = document.getElementById('caja-view');
+      const badgeContainer = document.getElementById('turno-status-badge');
+
+      try {
+        const turno = await api.get('/caja/turno-activo');
+        activeTurno = turno.estado === 'abierta' ? turno : null;
+
+        if (activeTurno) {
+          badgeContainer.innerHTML = `<span class="badge badge-success" style="font-size: 0.9rem;">Caja Abierta: S/ ${parseFloat(activeTurno.monto_inicial).toFixed(2)}</span>`;
+          
+          let cobrosHtml = '';
+          if (activeTurno.resumen_metodos && activeTurno.resumen_metodos.length > 0) {
+            cobrosHtml = activeTurno.resumen_metodos.map(m => `
+              <div class="card" style="padding: 1rem; text-align: center;">
+                <span style="font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase;">${m.metodo}</span>
+                <strong style="font-size: 1.3rem; display: block; color: var(--text-main); margin-top: 0.25rem;">
+                  S/ ${parseFloat(m.total).toFixed(2)}
+                </strong>
+                <small style="color: var(--text-muted);">${m.cantidad} pago(s)</small>
+              </div>
+            `).join('');
+          } else {
+            cobrosHtml = `<p style="grid-column: 1/-1; color: var(--text-dim); text-align: center;">Sin cobros registrados en este turno aún.</p>`;
+          }
+
+          container.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem;">
+              <div>
+                <div class="card" style="margin-bottom: 1.5rem;">
+                  <h3 style="margin-bottom: 1rem;">Cobros Acumulados en este Turno</h3>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
+                    ${cobrosHtml}
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <h3 style="margin-bottom: 1rem; color: var(--danger);">Cierre y Arqueo de Turno</h3>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+                  Abierta a las: ${activeTurno.abierta_at.slice(11, 16)} por ${activeTurno.nombre_recepcionista}
+                </p>
+                <div class="form-group">
+                  <label class="form-label" for="cierre-contado">Efectivo Contado en Gaveta (S/)</label>
+                  <input type="number" step="0.50" id="cierre-contado" class="form-control" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="cierre-notas">Notas de Cierre</label>
+                  <textarea id="cierre-notas" class="form-control" rows="2" placeholder="Observaciones de arqueo"></textarea>
+                </div>
+                <button onclick="cerrarTurnoCaja(${activeTurno.id})" class="btn btn-danger btn-lg" style="width: 100%;">
+                  Finalizar y Cerrar Caja
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          badgeContainer.innerHTML = `<span class="badge badge-danger" style="font-size: 0.9rem;">Caja Cerrada</span>`;
+          container.innerHTML = `
+            <div class="card" style="max-width: 450px; margin: 2rem auto; text-align: center; padding: 2.5rem;">
+              <h2 style="font-size: 1.4rem; margin-bottom: 0.75rem;">Apertura de Turno de Caja</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Ingresa el monto inicial con el que comienzas tu turno en recepción.
+              </p>
+              <div class="form-group">
+                <label class="form-label" for="abrir-monto">Monto Inicial en Efectivo (S/)</label>
+                <input type="number" step="10" id="abrir-monto" class="form-control" value="100.00" style="text-align: center; font-size: 1.3rem; font-weight: 700;">
+              </div>
+              <button onclick="abrirTurnoCaja()" class="btn btn-primary btn-lg" style="width: 100%;">
+                Abrir Turno de Caja
+              </button>
+            </div>
+          `;
+        }
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function abrirTurnoCaja() {
+      const monto = parseFloat(document.getElementById('abrir-monto').value || 0);
+      try {
+        await api.post('/caja/abrir', { monto_inicial: monto });
+        mostrarAlerta('Turno de caja abierto correctamente.', 'success');
+        cargarEstadoCaja();
+      } catch (err) {
+        mostrarAlerta('No se pudo abrir caja: ' + err.message, 'danger');
+      }
+    }
+
+    async function cerrarTurnoCaja(turnoId) {
+      const contado = parseFloat(document.getElementById('cierre-contado').value || 0);
+      const notas = document.getElementById('cierre-notas').value;
+
+      if (!confirm('¿Confirmas el cierre del turno de caja?')) return;
+
+      try {
+        const res = await api.post(`/caja/cerrar/${turnoId}`, {
+          efectivo_contado: contado,
+          notas_cierre: notas
+        });
+        mostrarAlerta(`Turno cerrado. Descuadre/Diferencia: S/ ${parseFloat(res.diferencia).toFixed(2)}`, 'info');
+        cargarEstadoCaja();
+      } catch (err) {
+        mostrarAlerta('Error cerrando caja: ' + err.message, 'danger');
+      }
+    }
+
+    // 3. VENTANILLA
+    async function cargarCanchasParaVentanilla() {
+      try {
+        canchasNegocio = await api.get('/canchas');
+        const select = document.getElementById('vent-cancha');
+        const horarioSelect = document.getElementById('vent-horario');
+
+        canchasNegocio.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.nombre} (${c.deporte_nombre}) — S/ ${parseFloat(c.precio_hora).toFixed(2)}`;
+          select.appendChild(opt);
+        });
+
+        // Generar opciones de horario estándar de 1h
+        for (let h = 7; h <= 22; h++) {
+          const opt = document.createElement('option');
+          const hora = `${String(h).padStart(2, '0')}:00:00`;
+          opt.value = hora;
+          opt.textContent = `${String(h).padStart(2, '0')}:00 a ${String(h + 1).padStart(2, '0')}:00`;
+          horarioSelect.appendChild(opt);
+        }
+
+        document.getElementById('vent-fecha').value = new Date().toISOString().split('T')[0];
+      } catch (err) {
+        console.error(err);
+      }
+
+      document.getElementById('form-ventanilla').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const canchaId = document.getElementById('vent-cancha').value;
+        const fecha = document.getElementById('vent-fecha').value;
+        const horaInicio = document.getElementById('vent-horario').value;
+        const horaFin = `${String(parseInt(horaInicio.split(':')[0], 10) + 1).padStart(2, '0')}:00:00`;
+        const nombre = document.getElementById('vent-nombre').value.trim();
+        const dni = document.getElementById('vent-dni').value.trim();
+        const notas = document.getElementById('vent-notas').value.trim();
+
+        try {
+          const res = await api.post('/reservas', {
+            cancha_id: parseInt(canchaId, 10),
+            fecha,
+            hora_inicio: horaInicio,
+            hora_fin: horaFin,
+            origen: 'recepcion',
+            cliente_nombre: nombre,
+            cliente_dni: dni,
+            notas: notas || null
+          });
+
+          mostrarAlerta(`Reserva en ventanilla generada con código <strong>${res.codigo}</strong>`, 'success');
+          document.getElementById('form-ventanilla').reset();
+          cargarReservasRecepcion();
+          switchTab('checkin', document.querySelector('.tab-btn'));
+        } catch (err) {
+          mostrarAlerta('Error en ventanilla: ' + err.message, 'danger');
+        }
+      });
+    }
+
+    function mostrarAlerta(msg, tipo = 'danger') {
+      const box = document.getElementById('alert-box');
+      box.className = `alert alert-${tipo}`;
+      box.innerHTML = msg;
+      box.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
