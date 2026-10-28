@@ -39,7 +39,9 @@ backend/
 │   ├── pagoService.js          # Transacciones de pagos, movimientos y reembolsos/notas de crédito
 │   ├── cajaService.js          # Control de turnos de recepción (apertura, arqueo y cierre)
 │   ├── cuponService.js         # Emisión, validación y canje de cupones de compensación
-│   └── reporteService.js       # Métricas operativas, KPIs e ingresos agrupados
+│   ├── reporteService.js       # Métricas operativas, KPIs e ingresos agrupados
+│   ├── pasarelaPagoService.js  # Motor multi-pasarela (Flow, Stripe y simulador Sandbox)
+│   └── emailService.js         # Emisión de correos transaccionales (Resend, Brevo y Mock)
 ├── controllers/
 │   ├── authController.js
 │   ├── negocioController.js
@@ -49,7 +51,8 @@ backend/
 │   ├── pagoController.js
 │   ├── cajaController.js
 │   ├── cuponController.js
-│   └── reporteController.js
+│   ├── reporteController.js
+│   └── pasarelaController.js
 ├── routes/
 │   ├── auth.js
 │   ├── negocios.js
@@ -57,6 +60,7 @@ backend/
 │   ├── canchas.js
 │   ├── reservas.js
 │   ├── pagos.js
+│   ├── pasarela.js
 │   ├── caja.js
 │   ├── cupones.js
 │   └── reportes.js
