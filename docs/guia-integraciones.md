@@ -210,3 +210,4 @@ Cuando `EMAIL_PROVIDER=mock` (por defecto):
 | `EMAIL_FROM_NAME` | Nombre visible del remitente en la bandeja de entrada | `"SportReserve Platform"` | Email |
 | `RESEND_API_KEY` | API Key de Resend (`re_...`) | *(vacío)* | Resend |
 | `BREVO_API_KEY` | API Key de Brevo (`xkeysib-...`) | *(vacío)* | Brevo |
+

@@ -13,7 +13,7 @@ const emailService = require('./emailService');
 class PasarelaPagoService {
   constructor() {
     this.provider = (process.env.PAYMENT_GATEWAY_PROVIDER || 'mock').toLowerCase();
-    this.appUrl = process.env.APP_URL || 'http://localhost:3000';
+    this.appUrl = (process.env.APP_URL || '').replace(/\/$/, '');
     
     // Configuración Flow
     this.flowApiKey = process.env.FLOW_API_KEY || '';
@@ -43,6 +43,7 @@ class PasarelaPagoService {
    * Inicia una orden de pago en línea bloqueando temporalmente el horario
    */
   async iniciarPago({
+    appUrl = null,
     negocioId,
     usuarioId,
     canchaId,
@@ -58,6 +59,7 @@ class PasarelaPagoService {
     cuponCodigo = null,
     cuponMonto = 0
   }) {
+    const baseUrl = (appUrl || this.appUrl || '').replace(/\/$/, '');
     // 1. Validar que la cancha exista y esté disponible
     const [canchaRows] = await db.query(
       'SELECT id, nombre, precio_por_hora, estado FROM canchas WHERE id = ? AND negocio_id = ?',
@@ -130,8 +132,8 @@ class PasarelaPagoService {
           currency: 'PEN',
           amount: parseFloat(monto).toFixed(2),
           email: clienteEmail || 'cliente@sportreserve.com',
-          urlConfirmation: `${this.appUrl}/api/pagos/online/webhook/flow`,
-          urlReturn: `${this.appUrl}/api/pagos/online/retorno?order=${orderNumber}`
+          urlConfirmation: `${baseUrl}/api/pagos/online/webhook/flow`,
+          urlReturn: `${baseUrl}/api/pagos/online/retorno?order=${orderNumber}`
         };
         params.s = this._signFlowParams(params);
 
@@ -175,8 +177,8 @@ class PasarelaPagoService {
           'line_items[0][price_data][unit_amount]': Math.round(parseFloat(monto) * 100),
           'line_items[0][quantity]': '1',
           'mode': 'payment',
-          'success_url': `${this.appUrl}/api/pagos/online/retorno?session_id={CHECKOUT_SESSION_ID}&order=${orderNumber}`,
-          'cancel_url': `${this.appUrl}/canchas.html`,
+          'success_url': `${baseUrl}/api/pagos/online/retorno?session_id={CHECKOUT_SESSION_ID}&order=${orderNumber}`,
+          'cancel_url': `${baseUrl}/canchas.html`,
           'client_reference_id': orderNumber
         });
 
@@ -221,7 +223,7 @@ class PasarelaPagoService {
       provider: 'mock',
       commerce_order: orderNumber,
       token: gatewayToken,
-      redirect_url: `${this.appUrl}/api/pagos/online/sandbox-checkout?token=${gatewayToken}`
+      redirect_url: `${baseUrl}/api/pagos/online/sandbox-checkout?token=${gatewayToken}`
     };
   }
 
