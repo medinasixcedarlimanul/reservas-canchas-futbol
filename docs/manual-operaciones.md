@@ -142,3 +142,4 @@ Ubicado en `/admin.html > Métricas & KPIs`, permite filtrar por rango de fechas
   - Comparativa de volumen recaudado por Efectivo, Tarjeta, Yape/Plin y Transferencia.
 - **Rendimiento por Cancha**:
   - Tabla de canchas ordenadas de mayor a menor recaudación y número de turnos jugados, permitiendo identificar los espacios más rentables del centro deportivo.
+

@@ -32,7 +32,10 @@ class PasarelaController {
         return res.status(400).json({ error: 'ID de sede o negocio es requerido' });
       }
 
+      const hostUrl = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+
       const resultado = await pasarelaPagoService.iniciarPago({
+        appUrl: hostUrl,
         negocioId: parseInt(negocioId, 10),
         usuarioId: req.user.id,
         canchaId: parseInt(cancha_id, 10),

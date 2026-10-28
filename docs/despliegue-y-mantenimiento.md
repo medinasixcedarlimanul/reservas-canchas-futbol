@@ -202,3 +202,4 @@ docker compose down
   docker compose up -d
   ```
   > *Nota: Esto recreará la base de datos limpia desde `database/init.sql`.*
+

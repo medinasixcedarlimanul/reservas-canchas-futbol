@@ -2,18 +2,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copiar archivos de dependencias e instalar dependencias de producción
-COPY package*.json ./
+# Copiar dependencias e instalar solo producción
+COPY backend/package*.json ./
 RUN npm ci --only=production
 
-# Copiar el código fuente del backend
-COPY . .
+# Copiar código del backend y assets del frontend (imagen 100% autocontenida)
+COPY backend/ ./
+COPY frontend/ ./frontend/
 
-# Exponer el puerto de la aplicación
 EXPOSE 3000
 
-# Ejecutar como usuario sin privilegios por seguridad
 USER node
 
-# Comando de inicio
 CMD ["node", "app.js"]

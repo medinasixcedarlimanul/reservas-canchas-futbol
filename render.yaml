@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: sportreserve-app
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: APP_URL
+        sync: false # Configurar con la URL generada por Render (https://sportreserve-app.onrender.com)
+      - key: FRONTEND_URL
+        sync: false
+      - key: DB_HOST
+        sync: false # Host de MySQL (AWS RDS, TiDB Cloud, Aiven o Render MySQL)
+      - key: DB_PORT
+        value: 3306
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: reservas_db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: EMAIL_PROVIDER
+        value: resend # o 'brevo' o 'mock'
+      - key: EMAIL_FROM
+        value: reservas@tudominio.com
+      - key: EMAIL_FROM_NAME
+        value: "SportReserve Platform"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: PAYMENT_GATEWAY_PROVIDER
+        value: flow # o 'stripe' o 'mock'
+      - key: FLOW_API_KEY
+        sync: false
+      - key: FLOW_SECRET_KEY
+        sync: false
+      - key: FLOW_ENV
+        value: production
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
