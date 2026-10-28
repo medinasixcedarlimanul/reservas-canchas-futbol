@@ -6,10 +6,11 @@ Plataforma integral y modular para la gestión y reserva de canchas y centros de
 
 ## 📌 Estado del Proyecto
 
-- **Fase Actual**: Base de Datos y Persistencia.
-- **Motor**: MySQL 8.0+ (InnoDB, UTF-8 `utf8mb4`).
-- **Despliegue Local**: Contenedorizado con Docker y Docker Compose.
-- **Próximas Fases**: Desarrollo de API REST (Backend), panel web (Frontend) y empaquetado para despliegue en la nube.
+- **Fase Actual**: Base de Datos y Backend (Ambos Contenedorizados).
+- **Motor de BD**: MySQL 8.0+ (InnoDB, UTF-8 `utf8mb4`).
+- **Servidor Backend**: Node.js 20 (Express) contenedorizado en Alpine Linux.
+- **Despliegue Local**: Docker Compose orquestando Base de Datos + API Backend.
+- **Próximas Fases**: Panel web e interfaz de usuario (Frontend).
 
 ---
 
@@ -17,57 +18,69 @@ Plataforma integral y modular para la gestión y reserva de canchas y centros de
 
 ```text
 reservas-canchas-futbol/
+├── backend/                # API REST en Node.js + Express
+│   ├── db/                 # Conexión al pool de MySQL
+│   ├── middleware/         # Autenticación JWT, roles y contexto multi-tenant
+│   ├── services/           # Lógica de negocio
+│   ├── controllers/        # Controladores HTTP
+│   ├── routes/             # Definición de rutas y endpoints
+│   ├── Dockerfile          # Imagen Docker ligera de producción
+│   └── package.json        # Dependencias del backend
 ├── database/
 │   └── init.sql            # Script DDL consolidado (17 tablas con índices y constraints)
 ├── docs/
-│   └── modelo-datos.md     # Documentación técnica completa, diccionario de datos y diagrama ER
-├── .env.example            # Plantilla de configuración de variables de entorno
+│   ├── modelo-datos.md     # Documentación técnica de BD y diagrama ER
+│   └── arquitectura-backend.md # Especificación y endpoints de la API REST
+├── .env.example            # Plantilla de variables de entorno para Docker
 ├── .gitignore              # Archivos y datos excluidos del control de versiones
-├── docker-compose.yml      # Configuración del servicio MySQL en contenedor
+├── docker-compose.yml      # Orquestación de MySQL 8.0 y API Backend
 └── README.md               # Documentación general del proyecto
 ```
 
 ---
 
-## 🚀 Puesta en Marcha Rápida (Base de Datos)
+## 🚀 Puesta en Marcha Rápida (Docker)
 
 ### 1. Requisitos Previos
 - [Docker](https://www.docker.com/) y Docker Compose (o [Colima](https://github.com/abiosoft/colima) en macOS).
 
 ### 2. Configurar Variables de Entorno
-Crea una copia del archivo de ejemplo:
+Crea una copia del archivo de ejemplo en la raíz:
 ```bash
 cp .env.example .env
 ```
-Parámetros principales en `.env`:
-- `MYSQL_DATABASE`: Nombre de la base de datos (por defecto: `reservas_db`).
-- `MYSQL_USER`: Usuario de la aplicación (por defecto: `reservas_app`).
-- `MYSQL_PASSWORD`: Contraseña del usuario.
-- `MYSQL_PORT`: Puerto expuesto en el host (por defecto: `3307` para evitar conflictos con MySQL local).
 
-### 3. Iniciar el Contenedor
-Levanta el servicio de base de datos en segundo plano:
+### 3. Iniciar la Plataforma (BD + Backend)
+Levanta todos los servicios en segundo plano con un solo comando:
 ```bash
-docker compose up -d
+docker compose up --build -d
 ```
-> El contenedor ejecutará automáticamente `database/init.sql` durante su primera inicialización, dejando listas todas las tablas, relaciones e índices sin datos de prueba.
+> El contenedor de base de datos (`reservas-canchas-db`) arrancará primero, ejecutará `database/init.sql` y el contenedor de la API (`reservas-canchas-backend`) esperará automáticamente a que la base de datos esté lista y saludable antes de iniciar el servidor.
 
 ### 4. Verificar el Estado
-Comprueba que el contenedor se encuentre activo y saludable (`healthy`):
+Comprueba que ambos contenedores se encuentren activos:
 ```bash
 docker compose ps
 ```
-
-### 5. Conexión a la Base de Datos
-Para interactuar directamente mediante la consola interactiva de MySQL:
+Verifica la respuesta del endpoint de salud del backend:
 ```bash
-docker compose exec db mysql -u reservas_app -p reservas_db
+curl http://localhost:3000/health
 ```
 
-Para detener el contenedor:
-```bash
-docker compose down
-```
+### 5. Comandos Útiles
+- Ver logs en vivo del backend:
+  ```bash
+  docker compose logs -f backend
+  ```
+- Ingresar a la consola interactiva de MySQL:
+  ```bash
+  docker compose exec db mysql -u reservas_app -psecret_app_password reservas_db
+  ```
+- Detener todos los contenedores:
+  ```bash
+  docker compose down
+  ```
+
 
 ---
 
