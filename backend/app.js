@@ -4,6 +4,9 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 
+const path = require('path');
+const fs = require('fs');
+
 const authRoutes = require('./routes/auth');
 const negocioRoutes = require('./routes/negocios');
 const deporteRoutes = require('./routes/deportes');
@@ -23,7 +26,10 @@ app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // Configuración de cabeceras de seguridad HTTP
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
 // CORS habilitado para entornos locales y configurables
 app.use(cors({
@@ -57,10 +63,30 @@ app.use('/api/caja', cajaRoutes);
 app.use('/api/cupones', cuponRoutes);
 app.use('/api/reportes', reporteRoutes);
 
-// Manejo de rutas inexistentes
+// Manejo de rutas inexistentes de la API
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint no encontrado' });
 });
+
+// Servir frontend estático si existe
+const frontendPath = path.resolve(__dirname, 'frontend');
+const frontendAltPath = path.resolve(__dirname, '../frontend');
+const staticDir = fs.existsSync(frontendPath) ? frontendPath : (fs.existsSync(frontendAltPath) ? frontendAltPath : null);
+
+if (staticDir) {
+  app.use(express.static(staticDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health') {
+      return next();
+    }
+    const cleanPath = req.path.replace(/^\//, '');
+    const potentialHtml = path.join(staticDir, `${cleanPath}.html`);
+    if (cleanPath && fs.existsSync(potentialHtml)) {
+      return res.sendFile(potentialHtml);
+    }
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
+}
 
 // Manejador global de errores
 app.use(errorHandler);
